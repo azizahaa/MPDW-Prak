@@ -5,7 +5,7 @@ date: "2023-09-10"
 output: word_document
 ---
 
-## Pemanggilan *Packages*
+# Pemanggilan *Packages*
 
 ```{r}
 library(dplyr)
@@ -17,7 +17,7 @@ library(HoRM) #untuk membuat model regresi Hildreth-Lu
 library(ggplot2)
 ```
 
-## Input Data
+# Input Data
 
 Data yang digunakan dalam kesempatan kali ini adalah **data Turbin 2018-2020**. Data terdiri dari data *Active Power (AP)*, *Rotor RPM (RPM)*, dan *Wind Speed (WS)*. Data kemudian dimasukkan dalam datacoba, data yang akan digunakan adalah data dari tanggal 21 Maret 2020 - 30 Maret 2020.
 
@@ -26,10 +26,11 @@ library(rio)
 datacoba<-import("https://raw.githubusercontent.com/azizahaa/MPDW-Prak/main/P2/Data%20Tugas%202.csv")
 datacoba$Time<-as.POSIXct(datacoba$Time)
 str(datacoba)
+summary(datacoba)
 is.null(datacoba)
 ```
 
-## Eksplorasi Data
+# Eksplorasi Data
 
 Sebelum melakukan regresi, akan diperlihatkan *plot time-series* dari datacoba Turbin dalam interval 21 Maret 2020-30 Maret 2020
 
@@ -44,9 +45,9 @@ autoplot(data.ts) +
   theme(plot.title = element_text(hjust = 0.5))
 ```
 
-## Pembuatan model
+#Pembuatan model
 
-### Eksplorasi Data
+## Eksplorasi Data
 
 Data yang telah dimasukkan kemudian dieksplorasi. Eksplorasi pertama yang dilakukan adalah dengan menggunakan *scatter plot*.
 
@@ -66,7 +67,7 @@ Berdasarkan scatter plot di atas, terlihat adanya hubungan / korelasi positif an
 
 Setalah mengetahui adanya hubungan antar ketiga peubah, maka model regresi dapat ditentukan.
 
-## Regresi
+# Regresi
 
 ```{r}
 #Pembuatan Model Regresi
@@ -117,7 +118,7 @@ acf(sisaan)
 pacf(sisaan)
 ```
 
-**Berdasarkan plot ACF dan PACF, terlihat semua dalam rentang batas dan tidak ada yang signifikan.** Namun, untuk lebih memastikan akan dilakukan uji formal dengan uji Durbin Watson.
+**Berdasarkan plot ACF dan PACF, terlihat banyak yang melewati rentang batas dan signifikan.** Namun, untuk lebih memastikan akan dilakukan uji formal dengan uji Durbin Watson.
 
 ```{r}
 #Deteksi autokorelasi dengan uji-Durbin Watson
@@ -128,9 +129,9 @@ dwtest(model)
 
 Berdasarkan hasil DW Test, didapatkan nilai $DW = 0.33755$ dan *p-value* = $< 2.2e-16$. Kondisi nilai *p-value* \< 0.05 dapat disimpulkan bahwa tolak H0, cukup bukti mengatakan adanya autokorelasi. Oleh karena itu, diperlukan penangan autokorelasi. Penanganan yang akan digunakan menggunakan dua metode, yaitu **Cochrane-Orcutt** dan **Hildret-Lu.**
 
-## Penanganan Autokorelasi
+# Penanganan Autokorelasi
 
-### Metode Cochrane-Orcutt
+## Metode Cochrane-Orcutt
 
 Penanganan metode Cochrane-Orcutt dapat dilakukan dengan bantuan packages Orcutt pada aplikasi `R` maupun secara manual. Berikut ini ditampilkan cara menggunakan bantuan `library` *packages* `Orcutt`.
 
@@ -160,6 +161,7 @@ RPM.trans<- datacoba$RotorRPM[-1]-datacoba$RotorRPM[-nrow(datacoba)]*rho
 WS.trans<-datacoba$WindSpeed[-1]-datacoba$WindSpeed[-nrow(datacoba)]*rho
 modelCOmanual<- lm(AP.trans~RPM.trans+WS.trans)
 summary(modelCOmanual)
+
 ```
 
 Hasil model transformasi bukan merupakan model sesungguhnya. Koefisien regresi masih perlu dicari kembali mengikuti $β_0^*=β_0+ρ ̂β_0$ dan $β_1^*=β_1$.
@@ -175,7 +177,7 @@ b1
 
 Hasil perhitungan koefisien regresi tersebut akan menghasilkan hasil yang sama dengan model yang dihasilkan menggunakan *packages*.
 
-### Metode Hildreth-Lu
+## Metode Hildreth-Lu
 
 Penanganan kedua adalah menggunakan metode Hildreth-Lu. Metode ini akan mencari nilai SSE terkecil dan dapat dicari secara manual maupun menggunakan packages. Jika menggunakan packages, gunakan `library` *packages* `HORM`.
 
@@ -183,40 +185,39 @@ Penanganan kedua adalah menggunakan metode Hildreth-Lu. Metode ini akan mencari 
 #Penanganan Autokorelasi Hildreth lu
 # Hildreth-Lu
 hildreth.lu.func<- function(r, model){
-  x1 <- model.matrix(model)[,2]
-  x2 <- model.matrix(model)[,3]
+  x <- model.matrix(model)[,-1]
   y <- model.response(model.frame(model))
-  n <- length(y)
+  n <- (length(y)-1)
   t <- 2:n
   y <- y[t]-r*y[t-1]
-  x1 <- x1[t]-r*x[t-1]
-  x2 <- x2[t]-r*x[t-1]
-  
+  x1 <- x[t,1]-r*x[t-1,1]
+  x2<-x[t,2]-r*x[t-1,2]
   return(lm(y~x1+x2))
 }
 
-#Pencariab rho yang meminimumkan SSE
+#Pencarian rho yang meminimumkan SSE
 r <- c(seq(0,1, by= 0.1))
 tab <- data.frame("rho" = r, "SSE" = sapply(r, function(i){deviance(hildreth.lu.func(i, model))}))
 tab
 ```
 
-Pertama-tama akan dicari di mana kira-kira $ρ$ yang menghasilkan SSE minimum. Pada hasil di atas terlihat $ρ$ minimum ketika 0.9. Namun, hasil tersebut masih kurang teliti sehingga akan dicari kembali $ρ$ yang lebih optimum dengan ketelitian yang lebih. Jika sebelumnya jarak antar $ρ$ yang dicari adalah 0.1, kali ini jarak antar $ρ$ adalah 0.001 dan dilakukan pada selang 0.8 sampai dengan 1.
+Pertama-tama akan dicari di mana kira-kira $ρ$ yang menghasilkan SSE minimum. Pada hasil di atas terlihat $ρ$ minimum ketika 0.9. Namun, hasil tersebut masih kurang teliti sehingga akan dicari kembali $ρ$ yang lebih optimum dengan ketelitian yang lebih. Jika sebelumnya jarak antar $ρ$ yang dicari adalah 0.1, kali ini jarak antar $ρ$ adalah 0.001 dan dilakukan pada selang 0.7 sampai dengan 1.
 
 ```{r}
 #Rho optimal di sekitar 0.9
-rOpt <- seq(0.8,1, by= 0.001)
+rOpt <- seq(0.7,1, by= 0.001)
 tabOpt <- data.frame("rho" = rOpt, "SSE" = sapply(rOpt, function(i){deviance(hildreth.lu.func(i, model))}))
 head(tabOpt[order(tabOpt$SSE),])
+
 
 #Grafik SSE optimum
 par(mfrow = c(1,1))
 plot(tab$SSE ~ tab$rho , type = "l", xlab = "Rho", ylab = "SSE")
 abline(v = tabOpt[tabOpt$SSE==min(tabOpt$SSE),"rho"], lty = 2, col="red",lwd=2)
-text(x=tabOpt[tabOpt$SSE==min(tabOpt$SSE),"rho"], y=min(tabOpt$SSE), labels = "rho=0.936", cex = 0.8)
+text(x=tabOpt[tabOpt$SSE==min(tabOpt$SSE),"rho"], y=min(tabOpt$SSE), labels = "rho=0.852", cex = 0.8)
 ```
 
-Perhitungan yang dilakukan aplikasi `R` menunjukkan bahwa nilai $ρ$ optimum, yaitu saat SSE terkecil terdapat pada nilai $ρ=0.936$. Hal tersebut juga ditunjukkan pada plot. Selanjutnya, model dapat didapatkan dengan mengevaluasi nilai $ρ$ ke dalam fungsi `hildreth.lu.func`, serta dilanjutkan dengan pengujian autokorelasi dengan uji Durbin-Watson. Namun, setelah pengecekan tersebut tidak lupa koefisien regresi tersebut digunakan untuk transformasi balik. Persamaan hasil transformasi itulah yang menjadi persamaan sesungguhnya.
+Perhitungan yang dilakukan aplikasi `R` menunjukkan bahwa nilai $ρ$ optimum, yaitu saat SSE terkecil terdapat pada nilai $ρ=0.852$. Hal tersebut juga ditunjukkan pada plot. Selanjutnya, model dapat didapatkan dengan mengevaluasi nilai $ρ$ ke dalam fungsi `hildreth.lu.func`, serta dilanjutkan dengan pengujian autokorelasi dengan uji Durbin-Watson. Namun, setelah pengecekan tersebut tidak lupa koefisien regresi tersebut digunakan untuk transformasi balik. Persamaan hasil transformasi itulah yang menjadi persamaan sesungguhnya.
 
 ```{r}
 #Model terbaik
@@ -224,17 +225,17 @@ modelHL <- hildreth.lu.func(tabOpt[tabOpt$SSE==min(tabOpt$SSE),"rho"],model)
 summary(modelHL)
 
 #Transformasi Balik
-cat("y = ", coef(modelHL)[1]/(1-min(tabOpt$rho)), "+", coef(modelHL)[2],"x1","+",coef(modelHL)[3], sep = "")
+cat("y = ", coef(modelHL)[1]/(1-tabOpt[tabOpt$SSE==min(tabOpt$SSE),"rho"]), "+", coef(modelHL)[2],"x1t","+",coef(modelHL)[3],"x2t", sep = "")
 ```
 
-Setelah dilakukan tranformasi balik, didapatkan model dengan metode Hildreth-Lu sebagai berikut. $$y_i=90.73324+1.926464x_1t+0.08992068x_2t$$
+Setelah dilakukan tranformasi balik, didapatkan model dengan metode Hildreth-Lu sebagai berikut. $$y_i=675.639+0.79196x_1t+210.9387x_2t$$
 
 ```{r}
 #Deteksi autokorelasi
 dwtest(modelHL)
 ```
 
-Hasil uji Durbin-Watson juga menunjukkan bawah nilai *p-value* sebesar $0.9999$, di mana *p-value* \> $\alpha$=5%. Artinya tak tolak $H_0$ atau belum cukup bukti menyatakan bahwa ada autokorelasi dalam data Turbin dengan metode Hildreth-Lu pada taraf nyata 5%.
+Hasil uji Durbin-Watson juga menunjukkan bawah nilai *p-value* sebesar $1$, di mana *p-value* \> $\alpha$=5%. Artinya tak tolak $H_0$ atau belum cukup bukti menyatakan bahwa ada autokorelasi dalam data Turbin dengan metode Hildreth-Lu pada taraf nyata 5%.
 
 Terakhir, akan dibandingkan nilai SSE dari ketiga metode (metode awal, metode Cochrane-Orcutt, dan Hildreth-Lu).
 
@@ -253,8 +254,8 @@ row.names(akurasi) <- c("SSE","MSE")
 akurasi
 ```
 
-Berdasarkan hasil tersebut dapat diketahui bahwa hasil penanganan autokorelasi dengan metode Cochrane-Orcutt dan Hildreth-Lu memiliki SSE sebesar $2801209$ dan $6475628$ secara berurutan. NIlai SSe ini lebih baik dibandingkan model awal ketika autokorelasi masih terjadi, yaitu sebesar $9563361$.
+Berdasarkan hasil tersebut dapat diketahui bahwa hasil penanganan autokorelasi dengan metode Cochrane-Orcutt dan Hildreth-Lu memiliki SSE sebesar $2801209$ dan $2800979$ secara berurutan.Keduanya memiliki nilai yang sedikit berbeda karena pengaruh perhitungan rho pada metode Hildreth-Lu sehingga dapat dikatakan keduanya sama. NIlai SSE ini lebih baik dibandingkan model awal ketika autokorelasi masih terjadi, yaitu sebesar $9563361$.
 
 # Simpulan
 
-**Autokorelasi yang terdapat pada data IPM terjadi akibat adanya korelasi di antara unsur penyusunnya. Indikator IPM yang erat hubungannya dengan perekonomian sangat rawan menjadi penyebab adanya autokorelasi. Adanya autokorelasi menyebabkan model regresi kurang baik karena akan meingkatkan galatnya.** Autokorelasi dapat dideteksi secara eksploratif melalui plot sisaan, ACF, dan PACF, serta dengan uji formal Durbin-Watson. Namun, autokorelasi tersebut dapat ditangani dengan metode Cochrane-Orcutt dan Hildreth-Lu. Kedua metode menghasilkan nilai SSE yang sama, artinya keduanya baik untuk digunakan.
+Autokorelasi yang terdapat pada data Active Power terjadi akibat adanya korelasi di antara unsur penyusunnya. Wind Speed adalah kecepatan angin disekitar turbin, sedangkan Rotor RPM adalah kecepatan baling-baling turbin berputar. Kecepatan baling-baling berputar akan mengikuti kecepatan angin disekitarnya. Jika semakin kuat  angin berhembus maka semakin cepat pula baling-baling berputar. Sehingga peubah Wind Speed yang memiliki hubungan yang erat dengan Rotor RPM menjadi kemungkinan terbesar penyebab adanya autokorelasi. Adanya autokorelasi menyebabkan model regresi kurang baik karena akan meingkatkan galatnya. Autokorelasi dapat dideteksi secara eksploratif melalui plot sisaan, ACF, dan PACF, serta dengan uji formal Durbin-Watson. Namun, autokorelasi tersebut dapat ditangani dengan metode Cochrane-Orcutt dan Hildreth-Lu. Kedua metode menghasilkan nilai SSE yang sama, artinya keduanya baik untuk digunakan.
