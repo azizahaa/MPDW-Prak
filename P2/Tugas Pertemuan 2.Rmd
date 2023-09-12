@@ -1,0 +1,43 @@
+---
+title: "Tugas Minggu 2-Regresi"
+author: "Azizah"
+date: "2023-09-10"
+output: word_document
+---
+## Pemanggilan *Packages*
+
+```{r}
+library(dplyr)
+library(TTR)
+library(forecast)
+library(lmtest) #digunakan untuk uji formal pendeteksian autokorelasi
+library(orcutt) #untuk membuat model regresi Cochrane-Orcutt
+library(HoRM) #untuk membuat model regresi Hildreth-Lu
+library(ggplot2)
+```
+
+## Input Data
+
+Data yang digunakan dalam kesempatan kali ini adalah **data Turbin 2018-2020**. Data terdiri dari data *Active Power (AP)*, *Rotor RPM (RPM)*, dan *Wind Speed (WS)*. Data kemudian dimasukkan dalam datacoba, data yang akan digunakan adalah data dari tanggal 21 Maret 2020 - 30 Maret 2020.
+
+```{r}
+library(rio)
+datacoba<-import("https://raw.githubusercontent.com/azizahaa/MPDW-Prak/main/P2/Data%20Tugas%202.csv")
+datacoba$Time<-as.POSIXct(datacoba$Time)
+str(datacoba)
+is.null(datacoba)
+```
+## Eksplorasi Data
+
+Sebelum melakukan regresi, akan diperlihatkan *plot time-series* dari datacoba Turbin dalam interval 21 Maret 2020-30 Maret 2020
+
+```{r}
+#Membentuk objek time series
+data.ts<-ts(datacoba[-1])
+
+#Membuat plot time series
+plot(data.ts)
+autoplot(data.ts) +
+  ggtitle("Time Series Plot of the Turbine Data Time-Series") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
