@@ -259,3 +259,5 @@ Berdasarkan hasil tersebut dapat diketahui bahwa hasil penanganan autokorelasi d
 # Simpulan
 
 Autokorelasi yang terdapat pada data Active Power terjadi akibat adanya korelasi di antara unsur penyusunnya. Wind Speed adalah kecepatan angin disekitar turbin, sedangkan Rotor RPM adalah kecepatan baling-baling turbin berputar. Kecepatan baling-baling berputar akan mengikuti kecepatan angin disekitarnya. Jika semakin kuat  angin berhembus maka semakin cepat pula baling-baling berputar. Sehingga peubah Wind Speed yang memiliki hubungan yang erat dengan Rotor RPM menjadi kemungkinan terbesar penyebab adanya autokorelasi. Adanya autokorelasi menyebabkan model regresi kurang baik karena akan meingkatkan galatnya. Autokorelasi dapat dideteksi secara eksploratif melalui plot sisaan, ACF, dan PACF, serta dengan uji formal Durbin-Watson. Namun, autokorelasi tersebut dapat ditangani dengan metode Cochrane-Orcutt dan Hildreth-Lu. Kedua metode menghasilkan nilai SSE yang sama, artinya keduanya baik untuk digunakan.
+
+
