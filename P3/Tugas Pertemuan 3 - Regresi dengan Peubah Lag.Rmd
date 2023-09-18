@@ -1,1 +1,384 @@
+---
+title: "Tugas 3"
+author: "Azizah"
+date: "2023-09-18"
+output: html_document
+---
 
+## *Packages*
+
+```{r, echo=FALSE}
+#PACKAGES
+#install.packages("dLagM") #install jika belum ada
+#install.packages("dynlm") #install jika belum ada
+#install.packages("MLmetrics") #install jika belum ada
+library(dLagM)
+library(dynlm)
+library(MLmetrics)
+library(lmtest)
+library(car)
+```
+
+## Impor Data
+
+```{r}
+datacoba <- rio::import("https://raw.githubusercontent.com/azizahaa/MPDW-Prak/main/P2/Data%20Tugas%202.csv")
+str(datacoba)
+plot
+b<-144*5
+data3<-datacoba[577:676,c(1,2,3)]
+plot(data3)
+```
+
+Data yang digunakan adalah data turbin pada tanggal 25 Maret 2023 dari pukul 00:00- 23.50. Peubah yang digunakan ada 2, yaitu Active Power sebagai Y, dan Wind Speed sebagai Xt.
+
+## Pembagian Data
+
+Data kemudian dibagi menjadi data train dan data test degan perbandingan 4:1. Data train adalah 80% dari data, sedangkan data test adalah 20% dari data
+
+```{r}
+#SPLIT DATA
+b<-round(nrow(data3)*0.8)
+w<-round(nrow(data3)*0.2)
+train3<-data3[1:b,]
+test3<-data3[(b+1):nrow(data3),]
+plot(test3)
+```
+
+Data kemudian dibuat menjadi data timeseries
+
+```{r}
+#data time series
+train3.ts<-ts(train3)
+test3.ts<-ts(test3)
+data3.ts<-ts(data3)
+```
+
+## Model Koyck
+
+Model Koyck didasarkan pada asumsi bahwa semakin jauh jarak lag peubah independen dari periode sekarang maka semakin kecil pengaruh peubah lag terhadap peubah dependen.
+
+Koyck mengusulkan suatu metode untuk menduga model dinamis distributed lag dengan mengasumsikan bahwa semua koefisien $\beta$ mempunyai tanda sama.
+
+Model kyock merupakan jenis paling umum dari model infinite distributed lag dan juga dikenal sebagai geometric lag
+
+$$
+y_t=a(1-\lambda)+\beta_0X_t+\beta_1Z_t+\lambda Y_{t-1}+V_t
+$$
+
+dengan $$V_t=u_t-\lambda u_{t-1}$$
+
+### Pemodelan
+
+Pemodelan model Koyck dengan `R` dapat menggunakan `dLagM::koyckDlm()` . Fungsi umum dari `koyckDlm` adalah sebagai berikut.
+
+```{r, eval=FALSE, message = FALSE, warning=FALSE, error=FALSE}
+koyckDlm(x , y , intercept)
+```
+
+Fungsi `koyckDlm()` akan menerapkan model lag terdistribusi dengan transformasi Koyck satu prediktor. Nilai `x` dan `y` tidak perlu sebagai objek *time series* (`ts`). `intercept` dapat dibuat `TRUE` untuk memasukkan intersep ke dalam model.
+
+```{r}
+#MODEL KOYCK
+model.koyck <- koyckDlm(x = train3$RotorRPM, y = train3$ActivePower)
+summary(model.koyck)
+AIC(model.koyck)
+BIC(model.koyck)
+```
+
+Dari hasil tersebut, didapat bahwa peubah $x_t$ dan $y_{t-1}$ memiliki nilai $P-Value<0.05$. Hal ini menunjukkan bahwa peubah $x_t$ dan $y_{t-1}$ berpengaruh signifikan terhadap $y$. Adapun model keseluruhannya adalah sebagai berikut.
+
+$$
+\hat{Y_t}=-231.3+86.8876X_t+0.6060Y_{t-1}
+$$
+
+### Peramalan dan Akurasi
+
+Berikut adalah hasil peramalan y untuk 29 periode kedepan menggunakan model koyck
+
+```{r}
+fore.koyck <- forecast(model = model.koyck, x=test3$RotorRPM, h=w)
+fore.koyck
+mape.koyck <- MAPE(fore.koyck$forecasts, test3$ActivePower)
+#akurasi data training
+GoF(model.koyck)
+```
+
+## Regression with Distributed Lag
+
+Pemodelan model Regression with Distributed Lag dengan `R` dapat menggunakan `dLagM::dlm()` . Fungsi umum dari `dlm` adalah sebagai berikut.
+
+```{r, eval=FALSE, error=FALSE}
+dlm(formula , data , x , y , q , remove )
+```
+
+Fungsi `dlm()` akan menerapkan model lag terdistribusi dengan satu atau lebih prediktor. Nilai `x` dan `y` tidak perlu sebagai objek *time series* (`ts`). $q$ adalah integer yang mewakili panjang *lag* yang terbatas.
+
+### Pemodelan (Lag=2)
+
+```{r}
+model.dlm <- dlm(x = train3$RotorRPM,y = train3$ActivePower , q = 2)
+summary(model.dlm)
+AIC(model.dlm)
+BIC(model.dlm)
+```
+
+Dari hasil diatas, didapat bahwa $P-value$ dari intercept dan $x_{t}<0.05$. Hal ini menunjukkan bahwa intercept dan \$x\_{t}\$ berpengaruh signifikan terhadap $y$. Adapun model keseluruhan yang terbentuk adalah sebagai berikut
+
+$$
+\hat{Y_t}=-663.70+239.98X_t-0.04684X_{t-1}-6.70521X_{t-2}
+$$
+
+### Peramalan dan Akurasi
+
+Berikut merupakan hasil peramalan $y$ untuk 29 periode kedepan
+
+```{r}
+fore.dlm <- forecast(model = model.dlm, x=test3$RotorRPM, h=w)
+fore.dlm
+mape.dlm <- MAPE(fore.dlm$forecasts, test3$ActivePower)
+#akurasi data training
+GoF(model.dlm)
+```
+
+### *Lag* Optimum
+
+```{r}
+#penentuan lag optimum 
+finiteDLMauto(formula = ActivePower ~ RotorRPM,
+              data = data.frame(train3), q.max=56, model.type = "dlm", error.type = "AIC", trace = FALSE)
+```
+
+Berdasarkan output tersebut, lag optimum didapatkan ketika lag=56. Selanjutnya dilakukan pemodelan untuk lag=56
+
+```{r}
+#model dlm dengan lag optimum
+model.dlm2 <- dlm(x = train3$RotorRPM,y = train3$ActivePower , q = 38)
+summary(model.dlm2)
+AIC(model.dlm2)
+BIC(model.dlm2)
+```
+
+Dari hasil tersebut terdapat beberapa peubah yang berpengaruh signifikan terhadap taraf nyata 5% yaitu $x_t$ . Adapun keseluruhan model yang terbentuk adalah
+
+$$
+\hat{Y_t}=-1466.171+357.824X_t+...-6.5X_{t-56}
+$$
+
+Adapun hasil peramalan 29 periode kedepan menggunakan model tersebut adalah sebagai berikut
+
+```{r}
+#peramalan dan akurasi
+fore.dlm2 <- forecast(model = model.dlm2, x=test3$RotorRPM, h=w)
+mape.dlm2<- MAPE(fore.dlm2$forecasts, test3$ActivePower)
+#akurasi data training
+GoF(model.dlm2)
+```
+
+Model tersebut merupakan model yang sangat baik dengan nilai MAPE yang kurang dari 10%.
+
+## Model Autoregressive
+
+Peubah dependen dipengaruhi oleh peubah independen pada waktu sekarang, serta dipengaruhi juga oleh peubah dependen itu sendiri pada satu waktu yang lalu maka model tersebut disebut *autoregressive* (Gujarati 2004).
+
+### Pemodelan
+
+Pemodelan Autoregressive dilakukan menggunakan fungsi `dLagM::ardlDlm()` . Fungsi tersebut akan menerapkan *autoregressive* berordo $(p,q)$ dengan satu prediktor. Fungsi umum dari `ardlDlm()` adalah sebagai berikut.
+
+```{r, eval=FALSE}
+ardlDlm(formula = NULL , data = NULL , x = NULL , y = NULL , p = 1 , q = 1 , 
+         remove = NULL )
+```
+
+Dengan $p$ adalah integer yang mewakili panjang *lag* yang terbatas dan $q$ adalah integer yang merepresentasikan ordo dari proses *autoregressive*.
+
+```{r}
+model.ardl <- ardlDlm(x = train3$RotorRPM, y = train3$ActivePower, p = 1,q=1)
+summary(model.ardl)
+AIC(model.ardl)
+BIC(model.ardl)
+```
+
+Hasil di atas menunjukkan bahwa  nilai-p pada peubah $\ge0.05$ Hal ini menunjukkan bahwa peubah $x_{t-1}$,$x_t$ dan $y_{t-1}$ berpengaruh signifikan terhadap $y_t$. Model keseluruhannya adalah sebagai berikut:
+
+$$
+\hat{Y}=-242.352+245.39X_t-160.52X_{t-1}+0.6360Y_{t-1}
+$$
+
+### Peramalan dan Akurasi(BELUM)
+
+```{r}
+fore.ardl <- forecast(model = model.ardl, x=test3$RotorRPM, h=w)
+fore.ardl
+```
+
+Data di atas merupakan hasil peramalan untuk 29 periode ke depan menggunakan Model Autoregressive dengan $p=1$ dan $q=1$.
+
+```{r}
+mape.ardl <- MAPE(fore.ardl$forecasts, test3$ActivePower)
+mape.ardl
+#akurasi data training
+GoF(model.ardl)
+```
+
+Berdasarkan akurasi di atas, terlihat bahwa nilai MAPE keduanya  jauh berbeda. Artinya, model regresi dengan distribusi lag ini `overfitted` atau `underfitted`
+
+### *Lag* Optimum (BELUM)
+
+```{r}
+#penentuan lag optimum
+model.ardl.opt <- ardlBoundOrders(data = data.frame(data3), ic = "AIC", 
+                                  formula = ActivePower ~ RotorRPM )
+min_p=c()
+for(i in 1:15){
+  min_p[i]=min(model.ardl.opt$Stat.table[[i]])
+}
+q_opt=which(min_p==min(min_p, na.rm = TRUE))
+p_opt=which(model.ardl.opt$Stat.table[[q_opt]] == 
+              min(model.ardl.opt$Stat.table[[q_opt]], na.rm = TRUE))
+data.frame("q_optimum" = q_opt, "p_optimum" = p_opt, 
+           "AIC"=model.ardl.opt$min.Stat)
+```
+
+Dari tabel di atas, dapat terlihat bahwa nilai AIC terendah didapat ketika $p=5$ dan $q=15$, yaitu sebesar 1498.1. Artinya, model autoregressive optimum didapat ketika $p=5$ dan $q=15$.
+
+Selanjutnya dapat dilakukan pemodelan dengan nilai $p$ dan $q$ optimum seperti inisialisasi di langkah sebelumnya.
+```{r}
+#Pemodelan dengan lag optimum
+model.ardl2 <- ardlDlm(x = train3$RotorRPM, y = train3$ActivePower, p = 6,q=15)
+summary(model.ardl2)
+AIC(model.ardl2)
+BIC(model.ardl2)
+```
+Hasil di atas menunjukkan bahwa hanya peubah $x_{t}$, $x_{t-1}$, $x_{t-3}$, $Y_{t-1}$, dan $Y_{t-13}$ yang  menunjukkan nilai-p pada peubah $\ge0.05$. Hal ini menunjukkan bahwa peubah $x_{t}$, $x_{t-1}$, $x_{t-3}$, $Y_{t-1}$, dan $Y_{t-13}$ berpengaruh signifikan terhadap $y_t$. Model keseluruhannya adalah sebagai berikut:
+
+$$
+\hat{Y}=-80.855372+ 254.760112X_t+....+0.051235Y_{t-13}
+$$
+```{r}
+#Peramalan dan akurasi model kedua
+fore.ardl2 <- forecast(model = model.ardl2, x=test3$RotorRPM, h=w)
+fore.ardl2
+```
+
+```{r}
+mape.ardl2 <- MAPE(fore.ardl2$forecasts, test3$ActivePower)
+mape.ardl2
+#akurasi data training
+GoF(model.ardl2)
+```
+Berdasarkan akurasi di atas, terlihat bahwa nilai MAPE keduanya  jauh berbeda. Artinya, model regresi dengan distribusi lag ini `overfitted` atau `underfitted`.
+
+## Pemodelan DLM & ARDL dengan Library `dynlm`
+
+Pemodelan regresi dengan peubah *lag* tidak hanya dapat dilakukan dengan fungsi pada *packages* `dLagM` , tetapi terdapat *packages* `dynlm` yang dapat digunakan. Fungsi `dynlm` secara umum adalah sebagai berikut.
+
+```{r, eval=FALSE}
+dynlm(formula, data, subset, weights, na.action, method = "qr",
+  model = TRUE, x = FALSE, y = FALSE, qr = TRUE, singular.ok = TRUE,
+  contrasts = NULL, offset, start = NULL, end = NULL, ...)
+```
+
+Untuk menentukan `formula` model yang akan digunakan, tersedia fungsi tambahan yang memungkinkan spesifikasi dinamika (melalui `d()` dan `L()`) atau pola linier/siklus dengan mudah (melalui `trend()`, `season()`, dan `harmon()`). Semua fungsi formula baru mengharuskan argumennya berupa objek deret waktu (yaitu, `"ts"` atau `"zoo"`).
+
+```{r}
+#sama dengan model dlm q=1
+cons_lm1 <- dynlm(ActivePower ~ RotorRPM+L(RotorRPM),data = train3.ts)
+#sama dengan model ardl p=1 q=0
+cons_lm2 <- dynlm(ActivePower ~ RotorRPM+L(ActivePower),data = train3.ts)
+#sama dengan ardl p=1 q=1
+cons_lm3 <- dynlm(ActivePower ~ RotorRPM+L(RotorRPM)+L(ActivePower),data = train3.ts)
+#sama dengan dlm p=2
+cons_lm4 <- dynlm(ActivePower ~ RotorRPM+L(RotorRPM)+L(RotorRPM,2),data = train3.ts)
+```
+
+### Ringkasan Model
+
+```{r}
+summary(cons_lm1)
+summary(cons_lm2)
+summary(cons_lm3)
+summary(cons_lm4)
+```
+
+
+### SSE
+
+```{r}
+deviance(cons_lm1)
+deviance(cons_lm2)
+deviance(cons_lm3)
+deviance(cons_lm4)
+```
+
+### Uji Diagnostik
+
+```{r}
+#uji model
+if(require("lmtest")) encomptest(cons_lm1, cons_lm2)
+```
+
+#### Autokorelasi
+
+```{r}
+#durbin watson
+dwtest(cons_lm1)
+dwtest(cons_lm2)
+dwtest(cons_lm3)
+dwtest(cons_lm4)
+```
+H0: Tidak berautokorelasi
+H1 : Ada autokorelasi
+
+#### Heterogenitas
+
+```{r}
+bptest(cons_lm1)
+bptest(cons_lm2)
+bptest(cons_lm3)
+bptest(cons_lm4)
+```
+H0 : homogen
+H1 : tidak homogen 
+
+#### Kenormalan
+
+```{r}
+shapiro.test(residuals(cons_lm1))
+shapiro.test(residuals(cons_lm2))
+shapiro.test(residuals(cons_lm3))
+shapiro.test(residuals(cons_lm4))
+```
+H0 : Data normal
+H1 : Data tidak menyebar normal
+
+## Perbandingan Model
+
+```{r}
+akurasi <- matrix(c(mape.koyck, mape.dlm, mape.dlm2, mape.ardl,mape.ardl2))
+row.names(akurasi)<- c("Koyck","DLM 1","DLM 2","Autoregressive 1","Autoregressive 2")
+colnames(akurasi) <- c("MAPE")
+akurasi
+```
+
+Berdasarkan nilai MAPE, model paling optimum didapat pada Model Autoregressive 2 karena memiliki nilai MAPE yang terkecil.
+
+### Plot
+
+```{r}
+par(mfrow=c(1,1))
+plot(test3$RotorRPM, test3$ActivePower, type="b", col="black")
+points(test3$RotorRPM, fore.koyck$forecasts,col="red")
+lines(test3$RotorRPM, fore.koyck$forecasts,col="red")
+points(test3$RotorRPM, fore.dlm$forecasts,col="blue")
+lines(test3$RotorRPM, fore.dlm$forecasts,col="blue")
+points(test3$RotorRPM, fore.dlm2$forecasts,col="orange")
+lines(test3$RotorRPM, fore.dlm2$forecasts,col="orange")
+points(test3$RotorRPM, fore.ardl$forecasts,col="green")
+lines(test3$RotorRPM, fore.ardl$forecasts,col="green")
+points(test3$RotorRPM, fore.ardl2$forecasts,col="purple")
+lines(test3$RotorRPM, fore.ardl2$forecasts,col="purple")
+legend("topleft",c("aktual", "koyck","DLM 1","DLM 2", "autoregressive"), lty=1, col=c("black","red","blue","orange","green","purple"), cex=0.5)
+```
+
+Berdasarkan plot tersebut, terlihat bahwa plot yang paling mendekati data aktualnya adalah Model koyck, sehingga dapat disimpulkan model terbaik dalam hal ini adalah model regresi koyck
