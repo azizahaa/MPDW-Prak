@@ -24,13 +24,13 @@ library(car)
 ```{r}
 datacoba <- rio::import("https://raw.githubusercontent.com/azizahaa/MPDW-Prak/main/P2/Data%20Tugas%202.csv")
 str(datacoba)
-plot
-b<-144*5
-data3<-datacoba[577:676,c(1,2,4)]
+plot(datacoba[500:1000,])
+b<-144*3
+data3<-datacoba[497:576,c(1,2,4)]
 plot(data3)
 ```
 
-Data yang digunakan adalah data turbin pada tanggal 25 Maret 2023 dari pukul 00:00- 16.30. Peubah yang digunakan ada 2, yaitu Active Power sebagai Y, dan Wind Speed sebagai Xt.
+Data yang digunakan adalah data turbin pada tanggal 24 Maret 2023 dari pukul 10:30-23:50 Peubah yang digunakan ada 2, yaitu Active Power sebagai Y, dan Wind Speed sebagai Xt.
 
 ## Pembagian Data
 
@@ -86,15 +86,15 @@ AIC(model.koyck)
 BIC(model.koyck)
 ```
 
-Dari hasil tersebut, didapat bahwa seluruh peubah memiliki nilai $P-Value<0.05$. Hal ini menunjukkan bahwa seluruh peubah berpengaruh signifikan terhadap $y_t$. Adapun model keseluruhannya adalah sebagai berikut.
+Dari hasil tersebut, didapat bahwa tidak ada peubah yang memiliki nilai $P-Value<0.05$. Hal ini menunjukkan bahwa tidak ada peubah yang berpengaruh signifikan secara individu terhadap $y_t$. Adapun model keseluruhannya adalah sebagai berikut.
 
 $$
-\hat{Y_t}=-279.4939+103.61X_t+0.5571Y_{t-1}
+\hat{Y_t}=781.733+1.224X_t-147.007 Y_{t-1}
 $$
 
 ### Peramalan dan Akurasi
 
-Berikut adalah hasil peramalan y untuk 20 periode kedepan menggunakan model koyck
+Berikut adalah hasil peramalan y untuk 16 periode kedepan menggunakan model koyck
 
 ```{r}
 fore.koyck <- forecast(model = model.koyck, x=test3$WindSpeed, h=w)
@@ -126,12 +126,12 @@ BIC(model.dlm)
 Dari hasil diatas, didapat bahwa $P-value$ dari intercept dan $x_{t}<0.05$. Hal ini menunjukkan bahwa intercept dan \$x\_{t}\$ berpengaruh signifikan terhadap $y$. Adapun model keseluruhan yang terbentuk adalah sebagai berikut
 
 $$
-\hat{Y_t}=-672.492+208.989X_t+ 1.188X_{t-1}+29.4525X_{t-2}
+\hat{Y_t}=-1171.134+310.013 X_t-22.964X_{t-1}+4.271X_{t-2}
 $$
 
 ### Peramalan dan Akurasi
 
-Berikut merupakan hasil peramalan $y$ untuk 20 periode kedepan
+Berikut merupakan hasil peramalan $y$ untuk 16 periode kedepan
 
 ```{r}
 fore.dlm <- forecast(model = model.dlm, x=test3$WindSpeed, h=w)
@@ -146,25 +146,26 @@ GoF(model.dlm)
 ```{r}
 #penentuan lag optimum 
 finiteDLMauto(formula = ActivePower ~ WindSpeed,
-              data = data.frame(train3), q.max=38, model.type = "dlm", error.type = "AIC", trace = FALSE)
+              data = data.frame(train3), q.max=30, model.type = "dlm", error.type = "AIC", trace = FALSE)
 ```
 
-Berdasarkan output tersebut, lag optimum didapatkan ketika lag=38. Selanjutnya dilakukan pemodelan untuk lag=38
+Berdasarkan output tersebut, lag optimum didapatkan ketika lag=30. Selanjutnya dilakukan pemodelan untuk lag=30
 
 ```{r}
 #model dlm dengan lag optimum
-model.dlm2 <- dlm(x = train3$WindSpeed,y = train3$ActivePower , q = 38)
+model.dlm2 <- dlm(x = train3$WindSpeed,y = train3$ActivePower , q = 30)
 summary(model.dlm2)
 AIC(model.dlm2)
 BIC(model.dlm2)
 ```
-Dari hasil tersebut terdapat beberapa peubah yang berpengaruh signifikan terhadap taraf nyata 5% yaitu Intecept, $x_t$, $x_{t-9}$$x_{t-31}$, Adapun keseluruhan model yang terbentuk adalah
+
+Dari hasil tersebut terdapat beberapa peubah yang berpengaruh signifikan terhadap taraf nyata 5% yaitu $x_t$. Adapun keseluruhan model yang terbentuk adalah
 
 $$
-\hat{Y_t}=-1097.5528+305.5846X_t+...-61.7322X_{t-38}
+\hat{Y_t}=-1093.1118+281.7280X_t+...+79.7673X_{t-30}
 $$
 
-Adapun hasil peramalan 20 periode kedepan menggunakan model tersebut adalah sebagai berikut
+Adapun hasil peramalan 16 periode kedepan menggunakan model tersebut adalah sebagai berikut
 
 ```{r}
 #peramalan dan akurasi
@@ -201,7 +202,7 @@ BIC(model.ardl)
 Hasil di atas menunjukkan bahwa nilai-p pada seluruh peubah dan intercept $\ge0.05$ Hal ini menunjukkan bahwa peubah seluruh peubah dan intercept berpengaruh signifikan terhadap $y_t$. Model keseluruhannya adalah sebagai berikut:
 
 $$
-\hat{Y}=-265.74680+233.95381X_t-139.70672X_{t-1}+0.61015Y_{t-1}
+\hat{Y}=-785.8903+295.8299X_t-98.4177X_{t-1}+0.3103Y_{t-1}
 $$
 
 ### Peramalan dan Akurasi(BELUM)
@@ -211,7 +212,7 @@ fore.ardl <- forecast(model = model.ardl, x=test3$WindSpeed, h=w)
 fore.ardl
 ```
 
-Data di atas merupakan hasil peramalan untuk 20 periode ke depan menggunakan Model Autoregressive dengan $p=1$ dan $q=1$.
+Data di atas merupakan hasil peramalan untuk 16 periode ke depan menggunakan Model Autoregressive dengan $p=1$ dan $q=1$.
 
 ```{r}
 mape.ardl <- MAPE(fore.ardl$forecasts, test3$ActivePower)
@@ -220,9 +221,9 @@ mape.ardl
 GoF(model.ardl)
 ```
 
-Berdasarkan akurasi di atas, terlihat bahwa nilai MAPE keduanya jauh berbeda. Artinya, model regresi dengan distribusi lag ini `overfitted` atau `underfitted`
+Berdasarkan akurasi di atas, terlihat bahwa nilai MAPE keduanya jauh berbeda. Artinya, model regresi dengan distribusi lag ini tidak  `overfitted` atau `underfitted`
 
-### *Lag* Optimum 
+### *Lag* Optimum
 
 ```{r}
 #penentuan lag optimum
@@ -251,10 +252,10 @@ AIC(model.ardl2)
 BIC(model.ardl2)
 ```
 
-Hasil di atas menunjukkan bahwa hanya intercept, peubah $x_{t}$, $x_{t-1}$, $x_{t-2}$, $x_{t-4}$, $x_{t-13}$, $x_{t-15}$,$Y_{t-1}$ yang menunjukkan nilai-p pada peubah $\ge0.05$. Hal ini menunjukkan bahwa peubah $x_{t}$, $x_{t-1}$, $x_{t-2}$, $x_{t-4}$, $x_{t-13}$, $x_{t-15}$,$Y_{t-1}$ berpengaruh signifikan terhadap $y_t$. Model keseluruhannya adalah sebagai berikut:
+Hasil di atas menunjukkan bahwa hanya intercept, peubah $x_{t}$ dan $x_{t-1}$yang menunjukkan nilai-p pada peubah $\ge0.05$. Hal ini menunjukkan bahwa peubah $x_{t}$ dan $x_{t-1}$ berpengaruh signifikan terhadap $y_t$. Model keseluruhannya adalah sebagai berikut:
 
 $$
-\hat{Y}=-404.4395+27.0540 X_t+....+0.2070Y_{t-2}
+\hat{Y}=-1534+346.8X_t+....+-0.07245Y_{t-2}
 $$
 
 ```{r}
@@ -270,7 +271,7 @@ mape.ardl2
 GoF(model.ardl2)
 ```
 
-Berdasarkan akurasi di atas, terlihat bahwa nilai MAPE keduanya jauh berbeda. Artinya, model regresi dengan distribusi lag ini `overfitted` atau `underfitted`.
+Berdasarkan akurasi di atas, terlihat bahwa nilai MAPE keduanya jauh berbeda. Artinya, model regresi dengan distribusi lag ini tidak  `overfitted` atau `underfitted`.
 
 ## Pemodelan DLM & ARDL dengan Library `dynlm`
 
