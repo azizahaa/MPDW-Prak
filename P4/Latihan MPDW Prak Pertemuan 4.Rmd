@@ -2,7 +2,7 @@
 title: "Latihan MPDW Praktikum Pertemuan 4"
 author: "G1401211046_Azizah"
 date: "2023-09-21"
-output: word_document
+output: html_document
 ---
 
 ## White Noise
@@ -42,7 +42,7 @@ Akan dicoba membangkitkan proses MA(2) dengan $\theta_1 = 0.4$ dan $\theta_2 = 0
 
 ```{r}
 set.seed(1046)
-ma[1] <- wn[1]
+ma <- wn[1]
 ma[2] <- wn[2]
 ```
 

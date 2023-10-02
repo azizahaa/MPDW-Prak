@@ -1,0 +1,155 @@
+---
+title: "Pertemuan 5 zaza's"
+author: "Azizah"
+date: "2023-09-26"
+output: html_document
+---
+
+```{r}
+library(ggplot2)
+library(tsibble)
+library(tseries)
+library(MASS)
+```
+
+### Input data 
+Data yang akan digunakan adalah data harga daging sapi dari Desember 2020 - Agustus 2023. Langkah pertama adalah memasukkan data yang akan digunakan 
+```{r}
+library(rio)
+datam5<-import("https://raw.githubusercontent.com/azizahaa/MPDW-Prak/main/P1/Data%20Harga%20Daging%20Sapi.csv")
+datam5.ts<-ts(datam5[2])
+```
+### Plot *Time Series*
+
+```{r}
+plot_m5.ts <- datam5.ts |> as_tsibble() |> 
+  ggplot(aes(x = index, y = value)) + geom_line() + theme_bw() +
+  xlab("Obs") + ylab("Nilai")
+plot_m5.ts
+mean(datam5.ts)
+```
+Berdasarkan plot time series tersebut, terlihat bahwa data tidak stationer dalam rataan, ditandai dengan adanya trend pada data, dan tidak stationer dalam ragam, ditandai dengan adanya perbedaaan lebar pita pada plot. 
+
+### Plot ACF
+
+```{r}
+acf(datam5.ts)
+```
+
+Berdasarkan plot ACF, terlihat bahwa plot ACF pada data tersebut menurun secara perlahan (*tails off slowly*) yang menandakan data tidak stasioner dalam rataan
+
+### Uji ADF
+
+```{r}
+adf.test(datam5.ts)
+```
+
+$H_0$ : Data tidak stasioner dalam rataan\
+
+$H_1$ : Data stasioner dalam rataan\
+
+Berdasarkan uji ADF tersebut, didapat *p-value* sebesar 0.4761 yang lebih besar dari taraf nyata 5% dan menandakan bahwa data tidak stasioner dalam rataan. Hal ini sesuai dengan hasil eksplorasi menggunakan plot time series dan plot ACF.
+
+### Partisi Data
+
+### Bagian 1
+
+```{r}
+datam5.ts1 <- datam5.ts[1:50] |> ts()
+mean(datam5.ts1)
+var(datam5.ts1)
+```
+
+#### Plot Time Series
+
+```{r}
+datam5.ts1 |> as_tsibble() |> 
+  ggplot(aes(x = index, y = value)) +
+  geom_line() + theme_bw() +
+  xlab("Obs") + ylab("Nilai")
+```
+
+Berdasarkan plot time series tersebut, terlihat bahwa data tidak stasioner dalam rataan karena masih terdapat tren pada data, dan tidak stasioner dalam ragam karena memiliki lebar pita yang berbeda
+
+#### Plot ACF
+
+```{r}
+acf(datam5.ts1)
+```
+
+Berdasarkan plot ACF, terlihat bahwa plot ACF pada data tersebut menurun secara perlahan (*tails off slowly*) yang menandakan data tidak stasioner dalam rataan
+
+#### Uji ADF
+
+```{r}
+adf.test(datam5.ts1)
+```
+
+$H_0$ : Data tidak stasioner dalam rataan
+
+$H_1$ : Data stasioner dalam rataan
+
+Berdasarkan uji ADF tersebut, didapat *p-value* sebesar 0.731 yang lebih besar dari taraf nyata 5% dan menandakan bahwa data tidak stasioner dalam rataan. Hal ini sesuai dengan hasil eksplorasi menggunakan plot time series dan plot ACF
+
+#### Plot Boxcox
+
+```{r}
+index <- seq(1:50)
+bc = boxcox(datam5.ts1~index, lambda = seq(-1,1.2,by=0.001))
+#Nilai Rounded Lambda
+lambda <- bc$x[which.max(bc$y)]
+lambda
+#SK
+bc$x[bc$y > max(bc$y) - 1/2 * qchisq(.95,1)]
+```
+
+### Bagian 2
+
+```{r}
+datam5.ts2 <- datam5.ts[1:100] |> ts()
+mean(datam5.ts2)
+var(datam5.ts2)
+```
+
+#### Plot Time Series
+
+```{r}
+datam5.ts2|> as_tsibble() |> 
+  ggplot(aes(x = index, y = value)) +
+  geom_line() + theme_bw() +
+  xlab("Obs") + ylab("Nilai")
+```
+
+Berdasarkan plot time series tersebut, terlihat bahwa data tidak stasioner dalam rataan karena masih terdapat tren pada data, dan tidak stasioner dalam ragam karena memiliki lebar pita yang cenderung tidak sama
+
+#### Plot ACF
+
+```{r}
+acf(datam5.ts2)
+```
+
+Berdasarkan plot ACF, terlihat bahwa plot ACF pada data tersebut menurun secara perlahan (*tails off slowly*) yang menandakan data tidak stasioner dalam rataan
+
+#### Uji ADF
+
+```{r}
+adf.test(datam5.ts2)
+```
+
+$H_0$ : Data tidak stasioner dalam rataan
+
+$H_1$ : Data stasioner dalam rataan
+
+Berdasarkan uji ADF tersebut, didapat *p-value* sebesar 0.5305 yang lebih besar dari taraf nyata 5% dan menandakan bahwa data tidak stasioner dalam rataan. Hal ini sesuai dengan hasil eksplorasi menggunakan plot time series dan plot ACF
+
+####Plot Box-Cox
+
+```{r}
+index <- seq(1:100)
+bc = boxcox(datam5.ts2~index, lambda = seq(0,4,by=0.01))
+#Nilai Rounded Lambda
+lambda <- bc$x[which.max(bc$y)]
+lambda
+#SK
+bc$x[bc$y > max(bc$y) - 1/2 * qchisq(.95,1)]
+```
