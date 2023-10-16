@@ -4,6 +4,7 @@ author: "Azizah"
 date: "2023-09-26"
 output: html_document
 ---
+
 # Packages
 
 ```{r}
@@ -92,7 +93,7 @@ lambda
 bc$x[bc$y > max(bc$y) - 1/2 * qchisq(.95,1)]
 ```
 
-Plot Boxcox menunjukkan nilai *rounded value* ($\lambda$) optimum sebesar **0.7** dan pada selang kepercayaan 95% nilai memiliki batas bawah **-2.7** dan batas atas **4.27**. Selang tersebut memuat nilai satu sehingga dapat dikatakan bahwa data  stasioner dalam ragam.
+Plot Boxcox menunjukkan nilai *rounded value* ($\lambda$) optimum sebesar **0.7** dan pada selang kepercayaan 95% nilai memiliki batas bawah **-2.7** dan batas atas **4.27**. Selang tersebut memuat nilai satu sehingga dapat dikatakan bahwa data stasioner dalam ragam.
 
 ## Penanganan Ketidakstasioneran Data
 
@@ -121,35 +122,35 @@ $H_0$ : Data tidak stasioner dalam rataan
 
 $H_1$ : Data stasioner dalam rataan
 
-Berdasarkan uji ADF tersebut, didapat *p-value* sebesar 0.01 yang lebih kecil dari taraf nyata 5% sehingga tolak $H_0$ atau data stasioner dalam rataan. Hal ini sesuai dengan hasil eksplorasi menggunakan plot time series dan plot ACF, sehingga dalam hal ini ketidakstasioneran data sudah berhasil ditangani dan dapat dilanjutkan ke pemodelan
+Berdasarkan uji ADF tersebut, didapat *p-value* sebesar \<0.01 yang lebih kecil dari taraf nyata 5% sehingga tolak $H_0$ atau data stasioner dalam rataan. Hal ini sesuai dengan hasil eksplorasi menggunakan plot time series dan plot ACF, sehingga dalam hal ini ketidakstasioneran data sudah berhasil ditangani dan dapat dilanjutkan ke pemodelan
 
 ## Identifikasi Model
 
-## Plot ACF
+### Plot ACF
 
 ```{r}
 acf(train.diff)
 ```
 
-Berdasarkan plot tersebut, terlihat bahwa plot ACF cenderung *cuts off* pada lag ke 0, sehingga jika plot PACF dianggap *tails of*, maka model tentatifnya adalah ARIMA(0,1,1).
+Berdasarkan plot tersebut, terlihat bahwa plot ACF cenderung *cuts off* sejak pada lag ke 0, sehingga tidak dapat ditentukan model dari hasil plot ACF
 
-## Plot PACF
+### Plot PACF
 
 ```{r}
 pacf(train.diff)
 ```
 
-Berdasarkan plot tersebut, terlihat bahwa plot PACF cenderung *cuts off* pada lag ke 0, sehingga jika plot ACF dianggap *tails of*, maka model tentatifnya adalah ARIMA(1,1,0).
+Berdasarkan plot tersebut, terlihat bahwa plot PACF cenderung *cuts off* sejak pada lag ke 0, sehingga plot PACF tidak dapat digunakan untuk menentukan model tentatif.
 
 Jika baik plot ACF maupun plot PACF keduanya dianggap tails of, maka model yang terbentuk adalah ARIMA(1,1,1)
 
-## Plot EACF
+### Plot EACF
 
 ```{r}
 eacf(train.diff)
 ```
 
-Identifikasi model menggunakan plot EACF dilakukan dengan melihat ujung segitiga pada pola segitiga nol. Dalam hal ini model tentatif yang terbentuk adalah ARIMA(0,1,1), ARIMA(1,1,1), ARIMA(2,1,2), dan ARIMA(3,1,1).
+Identifikasi model menggunakan plot EACF dilakukan dengan melihat ujung segitiga pada pola segitiga nol. Dalam hal ini model tentatif yang terbentuk adalah ARIMA(0,1,1), ARIMA(0,1,2), ARIMA(0,1,3), ARIMA(1,1,1), ARIMA(1,1,2), ARIMA(2,1,3), dan ARIMA(3,1,1).
 
 ## Pendugaan Parameter Model Tentatif
 
@@ -160,37 +161,56 @@ model1.da=Arima(train.diff, order=c(0,1,1),method="ML")
 summary(model1.da) #AIC=2012.16 
 lmtest::coeftest(model1.da) #seluruh parameter signifikan
 ```
-### ARIMA(1,1,0)
+
+### ARIMA(0,1,2)
 
 ```{r}
-model2.da=Arima(train.diff, order=c(1,1,0),method="ML")
-summary(model2.da) #AIC=2049.68
+model2.da=Arima(train.diff, order=c(0,1,2),method="ML")
+summary(model2.da) #AIC=2011.26 
 lmtest::coeftest(model2.da) #seluruh parameter signifikan
 ```
+
+### ARIMA(0,1,3)
+
+```{r}
+model3.da=Arima(train.diff, order=c(0,1,3),method="ML")
+summary(model3.da) #AIC=2013.26 
+lmtest::coeftest(model3.da) #tidak seluruh parameter signifikan
+```
+
 ### ARIMA(1,1,1)
 
 ```{r}
-model3.da=Arima(train.diff, order=c(1,1,1),method="ML")
-summary(model3.da) #AIC=2011.34
-lmtest::coeftest(model3.da) #seluruh parameter signifikan
-```
-
-### ARIMA(2,1,2)
-
-```{r}
-model4.da=Arima(train.diff, order=c(2,1,3),method="ML")
-summary(model4.da) #AIC=4748.3
+model4.da=Arima(train.diff, order=c(1,1,1),method="ML")
+summary(model4.da) #AIC=2011.34
 lmtest::coeftest(model4.da) #seluruh parameter signifikan
 ```
-### ARIMA(3,1,1)
+
+### ARIMA(1,1,2)
 
 ```{r}
-model5.da=Arima(train.diff, order=c(3,1,1),method="ML")
-summary(model5.da) #AIC=2015.21
+model5.da=Arima(train.diff, order=c(1,1,2),method="ML")
+summary(model5.da) #AIC=2013.26
 lmtest::coeftest(model5.da) #tidak seluruh parameter signifikan
 ```
 
-Berdasarkan pendugaan parameter di atas, nilai AIC terkecil dimiliki oleh model ARIMA(0,1,2) dan parameter model ARIMA(0,1,2) juga seluruhnya signifikan sehingga model yang dipilih adalah model ARIMA(0,1,2).
+### ARIMA(2,1,3)
+
+```{r}
+model6.da=Arima(train.diff, order=c(2,1,3),method="ML")
+summary(model6.da) #AIC=2010.91
+lmtest::coeftest(model6.da) #seluruh parameter signifikan
+```
+
+### ARIMA(3,1,1)
+
+```{r}
+model7.da=Arima(train.diff, order=c(3,1,1),method="ML")
+summary(model7.da) #AIC=2015.21
+lmtest::coeftest(model7.da) # tidak seluruh parameter signifikan
+```
+
+Berdasarkan pendugaan parameter di atas, nilai AIC terkecil dimiliki oleh model ARIMA(2,1,3) dan parameter model ARIMA(2,1,3) juga seluruhnya signifikan sehingga model yang dipilih adalah model ARIMA(2,1,3).
 
 ## Analisis Sisaan
 
@@ -200,7 +220,7 @@ Model terbaik hasil identifikasi kemudian dicek asumsi sisaannya. Sisaan model A
 
 ```{r}
 #Eksplorasi 
-sisaan.da <- model4.da$residuals 
+sisaan.da <- model6.da$residuals 
 par(mfrow=c(2,2)) 
 qqnorm(sisaan.da) 
 qqline(sisaan.da, col = "blue", lwd = 2) 
@@ -210,7 +230,7 @@ pacf(sisaan.da)
 par(mfrow = c(1,1))
 ```
 
-Berdasarkan plot kuantil-kuantil normal, secara eksplorasi ditunjukkan sisaan tidak menyebar normal ditandai dengan titik titik yang cenderung tidak mengikuti garis $45^{\circ}$. Kemudian dapat dilihat juga lebar pita sisaan yang cenderung tidak sama menandakan bahwa sisaan memiliki ragam yang heterogen. Plot ACF dan PACF sisaan ARIMA(0,0,2) juga  signifikan pada lag 14 yang menandakan saling bebas. Kondisi ini akan diuji lebih lanjut dengan uji formal.
+Berdasarkan plot kuantil-kuantil normal, secara eksplorasi ditunjukkan sisaan tidak menyebar normal ditandai dengan titik titik yang cenderung tidak mengikuti garis $45^{\circ}$. Kemudian dapat dilihat juga lebar pita sisaan yang cenderung tidak sama menandakan bahwa sisaan memiliki ragam yang heterogen. Plot ACF dan PACF sisaan ARIMA(2,1,3) juga signifikan pada lag 13 yang menandakan tidak saling bebas. Kondisi ini akan diuji lebih lanjut dengan uji formal.
 
 ### Uji Formal
 
@@ -225,7 +245,7 @@ $H_0$ : Sisaan menyebar normal
 
 $H_1$ : Sisaan tidak menyebar normal
 
-Berdasarkan uji KS tersebut, didapat *p-value* sebesar $<2.2e-16$ yang kurang dari taraf nyata 5% sehingga tolak $H_0$ dan menandakan bahwa sisaan tidak menyebar normal. Hal ini sesuai dengan hasil eksplorasi menggunakan plot kuantil-kuantil normal.
+Berdasarkan uji KS tersebut, didapat *p-value* sebesar $<2.2e-16$ yang kurang dari taraf nyata 5% sehingga **tolak** $H_0$ dan menandakan bahwa sisaan tidak menyebar normal. Hal ini sesuai dengan hasil eksplorasi menggunakan plot kuantil-kuantil normal.
 
 ```{r}
 #2) Sisaan saling bebas/tidak ada autokorelasi 
@@ -238,7 +258,7 @@ $H_0$ : Sisaan saling bebas
 
 $H_1$ : Sisaan tidak tidak saling bebas
 
-Berdasarkan uji Ljung-Box tersebut, didapat *p-value* sebesar 0.2866  yang lebih besar dari taraf nyata 5% sehingga tak tolak $H_0$ dan menandakan bahwa sisaan saling bebas. Hal ini berbeda dengan eksplorasi.
+Berdasarkan uji Ljung-Box tersebut, didapat *p-value* sebesar $0.2866$ yang lebih besar dari taraf nyata 5% sehingga **tak tolak** $H_0$ dan menandakan bahwa sisaan saling bebas. Hal ini berbeda dengan eksplorasi.
 
 ```{r}
 #3) Sisaan homogen 
@@ -251,7 +271,7 @@ $H_0$ : Ragam sisaan homogen
 
 $H_1$ : Ragam sisaan tidak homogen
 
-Berdasarkan uji Ljung-Box terhadap sisaan kuadrat tersebut, didapat *p-value* sebesar 0.7287 yang kurang dari taraf nyata 5% sehingga tak tolak $H_0$ dan menandakan bahwa ragam sisaan homogen. Hal ini berbeda dengan eksplorasi.
+Berdasarkan uji Ljung-Box terhadap sisaan kuadrat tersebut, didapat *p-value* sebesar $0.7287$ yang lebih besar dari taraf nyata 5% sehingga **tak tolak** $H_0$ dan menandakan bahwa ragam sisaan homogen. Hal ini berbeda dengan eksplorasi.
 
 ```{r}
 #4) Nilai tengah sisaan sama dengan nol 
@@ -264,27 +284,26 @@ $H_0$ : nilai tengah sisaan sama dengan 0
 
 $H_1$ : nilai tengah sisaan tidak sama dengan 0
 
-Berdasarkan uji-ttersebut, didapat *p-value* sebesar 0.804  yang lebih besar dari taraf nyata 5% sehingga tak tolak $H_0$ dan menandakan bahwa nilai tengah sisaan sama dengan nol. 
+Berdasarkan uji-ttersebut, didapat *p-value* sebesar $0.804$ yang lebih besar dari taraf nyata 5% sehingga **tak tolak** $H_0$ dan menandakan bahwa nilai tengah sisaan sama dengan nol.
 
 ## Overfitting
 
-Tahapan selanjutnya adalah *overfitting* dilakukan dengan menaikkan orde AR(p) dan MA(q) dari model ARIMA(0,0,2) untuk melihat apakah terdapat model lain yang lebih baik dari model saat ini. Kandidat model *overfitting* adalah ARIMA(1,0,2) dan ARIMA(0,0,3).
+Tahapan selanjutnya adalah *overfitting* dilakukan dengan menaikkan orde AR(p) dan MA(q) dari model ARIMA(2,1,3) untuk melihat apakah terdapat model lain yang lebih baik dari model saat ini. Kandidat model *overfitting* adalah ARIMA(3,1,3) dan ARIMA(2,1,4).
 
 ```{r}
 #---OVERFITTING---#
-model1a=Arima(train.diff, order=c(2,1,3),method="ML")
-summary(model1a) #327.31
-lmtest::coeftest(model1a) #ar1 tidak signifikan
+model1a=Arima(train.diff, order=c(2,1,4),method="ML")
+summary(model1a) #AIC = 2014.45
+lmtest::coeftest(model1a) #ma4 tidak signifikan
 
-model1b=Arima(train.diff, order=c(2,1,3),method="ML")
-summary(model1b) #327.24
-lmtest::coeftest(model1b) #ma3 tidak signifikan
+model1b=Arima(train.diff, order=c(3,1,3),method="ML")
+summary(model1b) #AIC = 2014.53
+lmtest::coeftest(model1b) #ar3 tidak signifikan
 
-#model yang dipilih adalah model awal, yaitu ARIMA(0,0,2)
+#model yang dipilih adalah model awal, yaitu ARIMA(2,1,3)
 ```
 
-Berdasarkan kedua model hasil *overfitting* di atas, model ARIMA(1,0,2) dan ARIMA(0,0,3) memiliki AIC yang lebih besar dibandingkan dengan model ARIMA(0,0,2) dan parameter kedua model ARIMA(1,0,2) dan ARIMA(0,0,3) tidak seluruhnya signifikan. Oleh karena itu, model ARIMA(0,0,2) akan tetap digunakan untuk melakukan peramalan.
-
+Berdasarkan kedua model hasil *overfitting* di atas, model ARIMA(3,1,3) dan ARIMA(2,1,4) memiliki AIC yang lebih besar dibandingkan dengan model ARIMA(2,1,3) dan parameter kedua model ARIMA(3,1,3) dan ARIMA(2,1,4) tidak seluruhnya signifikan. Oleh karena itu, model ARIMA(2,1,3) akan tetap digunakan untuk melakukan peramalan.
 
 ## Peramalan
 
@@ -292,13 +311,13 @@ Peramalan dilakukan menggunakan fungsi `forecast()` . Contoh peramalan berikut i
 
 ```{r}
 #---FORECAST---#
-ramalan.da <- forecast::forecast(model1b, h = 20) 
+ramalan.da <- forecast::forecast(model6.da, h = 20) 
 ramalan.da
 data.ramalan.da <- ramalan.da$mean
 plot(ramalan.da)
 ```
 
-Berdasarkan hasil plot ramalan di atas, dapat dilihat bahwa ramalan ARIMA(0,012) cenderung tidak stabil hingga akhir periode. Selanjutnya, dapat dicari nilai akurasi antara hasil ramalan dengan data uji sebagai berikut.
+Berdasarkan hasil plot ramalan di atas, dapat dilihat bahwa ramalan ARIMA(2,1,3) cenderung tidak stabil hingga akhir periode. Selanjutnya, dapat dicari nilai akurasi antara hasil ramalan dengan data uji sebagai berikut.
 
 ```{r}
 pt_1 <- train.ts[120] #nilai akhir data latih
@@ -315,3 +334,5 @@ colnames(perbandingan.da)<-c("Aktual","Hasil Forecast")
 perbandingan.da
 accuracy(ts(hasil[-1]), head(test.ts, n=20))
 ```
+
+Akurasi yang didapatkan dari model ARIMA (2,1,3) dengan ukuran MAPE adalah $1.40$
